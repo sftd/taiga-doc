@@ -234,7 +234,7 @@ in production environments, should run on an application server. The details for
 section of this document.
 
 Async tasks (Optional) - To Do
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Frontend installation
 ---------------------
@@ -277,7 +277,7 @@ Now, having **taiga-front-dist** downloaded and configured, the next step is to 
 explained in the final section of this tutorial.
 
 Events installation (To Do)
--------------------
+---------------------------
 
 Final steps
 -----------

@@ -26,7 +26,7 @@ for small/medium production environments.
 Before starting
 ---------------
 
-This tutorial assumes that you are using a clean, recently updated, *CentOS 6** image.
+This tutorial assumes that you are using a clean, recently updated, **CentOS 6** image.
 
 Due the nature of frontend application, you should know that this service will be used
 through the domain/public-ip. This is because, the frontend application will run on your browser

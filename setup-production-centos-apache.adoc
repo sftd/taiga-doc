@@ -346,7 +346,8 @@ restart() {
         echo "Stopping Circus (Taiga) process..."
         if [ -f "${PIDFILE}" ];
         then
-                su - taiga -c "kill -15 $(cat ${PIDFILE})"
+#               su - taiga -c "kill -15 $(cat ${PIDFILE})"
+                su - taiga -c 'killall --user taiga'
                 su - taiga -c 'rm '"${PIDFILE}"
                 sleep 5
         else

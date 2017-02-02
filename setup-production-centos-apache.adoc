@@ -278,8 +278,136 @@ Now, having **taiga-front-dist** downloaded and configured, the next step is to 
 (in **dist** directory) under static file web server: we use **apache**. That process is
 explained in the final section of this tutorial.
 
-Events installation (To Do)
----------------------------
+Events installation
+-------------------
+
+**This step is completelly optional and can be skipped**
+
+Taiga-events is the Taiga websocket server, it allows taiga-front showing realtime changes in backlog, taskboard, kanban and issues listing.
+
+Taiga events needs rabbitmq (the message broker) to be installed
+
+.Installing rabbitmq
+[source,bash]
+----
+sudo yum install rabbitmq-server
+----
+
+.Creating a taiga user and virtualhost for rabbitmq
+[source,bash]
+----
+sudo rabbitmqctl add_user taiga PASSWORD
+sudo rabbitmqctl add_vhost taiga
+sudo rabbitmqctl set_permissions -p taiga taiga ".*" ".*" ".*"
+----
+
+.Update your taiga-back settings to include in your local.py the lines:
+[source,python]
+----
+EVENTS_PUSH_BACKEND = "taiga.events.backends.rabbitmq.EventsPushBackend"
+EVENTS_PUSH_BACKEND_OPTIONS = {"url": "amqp://taiga:PASSWORD@127.0.0.1:5672/taiga"}
+----
+
+The next step is downloading the code from github and installing their dependencies:
+
+.Download the code
+[source,bash]
+----
+cd ~
+git clone https://github.com/taigaio/taiga-events.git taiga-events
+cd taiga-events
+----
+
+.Install all the javascript dependencies needed
+[source,bash]
+----
+sudo yum install -y nodejs nodejs-legacy npm
+sudo npm install
+sudo npm install -g coffee-script
+----
+
+.Copy and edit the config.json file you should update your rabbitmq uri and the secret key.
+[source,bash]
+----
+cp config.example.json config.json
+----
+
+.Your config.json should be like:
+[source,json]
+----
+{
+    "url": "amqp://taiga:PASSWORD@127.0.0.1:5672/taiga",
+    "secret": "mysecret",
+    "webSocketServer": {
+        "port": 8888
+    }
+}
+----
+
+Next, your 'secret' in your `config.json` key should be the same as your "SECRET_KEY" in `~/taiga-back/settings/local.py`
+
+Now you have to add taiga-events to circus configuration. See link:#circus-and-gunicorn[Circus and gunicorn] section.
+
+.Taiga taiga-events configuration block for circus on /home/taiga/circus.ini
+[source,ini]
+----
+[watcher:taiga-events]
+working_dir = /home/taiga/taiga-events
+cmd = /usr/bin/coffee
+args = index.coffee
+uid = taiga
+numprocesses = 1
+autostart = true
+send_hup = true
+stdout_stream.class = FileStream
+stdout_stream.filename = /home/taiga/logs/taigaevents.stdout.log
+stdout_stream.max_bytes = 10485760
+stdout_stream.backup_count = 12
+stderr_stream.class = FileStream
+stderr_stream.filename = /home/taiga/logs/taigaevents.stderr.log
+stderr_stream.max_bytes = 10485760
+stderr_stream.backup_count = 12
+----
+
+Then you have to reload your circus configuration restart the other services and start taiga-events:
+
+[source,bash]
+----
+/etc/init.d/circusd-taiga restart
+----
+
+Apache need extra configuration too for taiga-events. **Module `mod_proxy_wstunnel` must be installed.**
+
+.Change configuration in httpd.conf.
+[source,nginx]
+----
+(...)
+
+    DocumentRoot /home/taiga/taiga-front-dist/dist/
+
+    ProxyPass "/events/"  "ws://127.0.0.1:8888/"
+    ProxyPassReverse "/events/" "ws://127.0.0.1:8888/"
+
+    RewriteCond %{REQUEST_URI} ^/api(.*)
+    RewriteRule .* http://127.0.0.1:8001/api%1 [P,QSA]
+
+    RewriteCond %{REQUEST_URI} ^/admin(.*)
+    RewriteRule .* http://127.0.0.1:8001%{REQUEST_URI} [P,QSA]
+
+    RewriteCond %{HTTP:Upgrade} !websocket [NC]
+    RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+    RewriteRule . /index.html [L]
+----
+
+Important parts:
+
+`ProxyPass "/events/"  "ws://127.0.0.1:8888/"`
+
+`ProxyPassReverse "/events/" "ws://127.0.0.1:8888/"`
+
+`RewriteCond %{HTTP:Upgrade} !websocket [NC]`
+
+And finally, reload apache with `sudo apachectl restart`.
 
 Final steps
 -----------
